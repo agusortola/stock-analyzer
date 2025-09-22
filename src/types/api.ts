@@ -4,13 +4,15 @@ export interface AnalysisSection {
 }
 
 export interface StockAnalysisResponse {
-  ticker: string;
+  ticker?: string;
+  content?: string; // Para respuestas de texto plano
+  chartUrl?: string;
+  // Propiedades estructuradas opcionales para compatibilidad
   executiveSummary?: AnalysisSection;
   financialSnapshot?: AnalysisSection;
   technicalAnalysis?: AnalysisSection;
   marketContext?: AnalysisSection;
   integratedThesis?: AnalysisSection;
-  chartUrl?: string;
   [key: string]: AnalysisSection | string | undefined; // Para permitir secciones adicionales
 }
 

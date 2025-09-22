@@ -3,11 +3,77 @@ import SearchBar from "./components/SearchBar";
 import AnalysisResult from "./components/AnalysisResult";
 import type { StockAnalysisResponse } from "./types/api";
 
+// Mock data para testing
+const MOCK_ANALYSIS_DATA: StockAnalysisResponse = {
+  ticker: "AAPL",
+  content: `https://r2.chart-img.com/20251006/tradingview/advanced-chart/ae23f8c0-481c-4267-8fa5-27dc46111ccf.png
+
+1) Indicator Confluence (Stock Tool):
+- MACD: 7.89 vs Signal 2.90 — positive, widening spread; bullish momentum strengthening
+- RSI: 66.23 — bullish, below overbought; no bearish divergence indicated
+- Volume: Expanding on the breakout in recent weeks, confirming participation
+- Critical Levels:
+  - Resistance: $260 (round/52-week high), then price discovery
+  - Support: $252–$255 (breakout zone), $240 (recent shelf), $220 (prior base)
+- Technical Outlook (4–12 weeks):
+  - Bullish. Weekly close above $260 with firm volume would likely extend into $265–$275. A weekly close back below $240 would warn of a deeper retest toward $225–$220.
+- Entry/Exit Considerations (illustrative, weekly timeframe):
+  - Entries: Pullbacks into $252–$255; momentum add on weekly close >$260 with rising volume
+  - Risk control: Reduce on weekly close <$240; trend invalidation on weekly close <$220
+  - Profit-taking: Scale around $260–$265 on initial extension; trail if continuation holds and RSI approaches >70
+
+2) Market Context & Sentiment
+- News Landscape (Tavily):
+  - Momentum and sentiment improved post iPhone 17 launch; AAPL turned positive YTD (CNBC, Sep 22, 2025)
+  - Analyst actions: Tigress $305 PT (Sep 17); Bernstein SG initiated Outperform $290 (Sep 16); some cautious moves on Sep 11 (MarketMinute roundup)
+  - Near-term catalyst: Q4 FY2025 earnings and Q1 FY2026 guide around late Oct 2025 (Nasdaq earnings page)
+- Analyst/Expert Consensus:
+  - Consensus PT cluster in mid-$240s per MarketMinute, with upside outliers to $290–$305; tone skewed constructive into earnings
+- Sector/Market Performance:
+  - AAPL lagged other megacaps earlier in 2025 due to perceived AI capex gap, but is catching up as hardware cycle and services strength underpin sentiment (CNBC)
+- Sentiment Drivers:
+  - Positive: iPhone 17 Pro mix/ASPs, services margins, massive buybacks, fresh Buy/Outperform initiations
+  - Negative: China competition/ASP pressure, regulatory/tariff risks, premium valuation sensitivity to guidance
+
+3) Integrated Investment Thesis
+- Convergence Analysis:
+  - Technicals: Breakout with bullish MACD/RSI and supportive volume favors upside continuation
+  - Fundamentals: Premium multiples (P/E 36.3, EV/EBITDA 25.4) supported by elite profitability (net margin 24.3%, ROE ~150%) and robust FCF
+  - Sentiment: Improving into earnings on analyst upgrades; key is sustainability of holiday-quarter demand and China performance
+- Conflict Resolution:
+  - Bull case: Strong holiday guide and favorable iPhone mix; weekly close >$260 with volume → $265–$275 near term
+  - Bear case: Soft guide/China headwinds; weekly close <$240 → risk of $225–$220 retest and multiple compression
+- Risk/Reward Assessment (1–3 months; confidence Medium):
+  - Upside: Break/hold >$260 to $265–$275: ~45%
+  - Base: Consolidate $250–$260 to digest gains: ~35%
+  - Downside: Lose $240 on a weekly close → $225–$230 (risk to $220): ~20%
+- Time Horizon Considerations:
+  - Short-term (1–4 weeks): Expect tests of $260; buy shallow dips if breadth/volume hold
+  - Medium-term (1–6 months): Path higher if guide and China trends cooperate; sustained closes >$260 keep the uptrend intact
+- Action Items:
+  - Monitor: Late-Oct earnings date and Q1 FY26 guide; iPhone 17 sell-through/lead times; China datapoints; services margin commentary
+  - Price triggers: Add on weekly close >$260; buy dips near $252–$255 if momentum intact; reduce/hedge on weekly close <$240; reassess if <$220
+  - Risk management: Use weekly closes to avoid noise; consider options overlays (e.g., covered calls into earnings; collars if protecting gains)
+
+4) Sources and Data Notes
+- Technicals: Stock Tool weekly analysis for NASDAQ:AAPL (last close $256.08; weekly +4.31%; MACD 7.89 vs 2.90; RSI 66.23; volume expanding). Chart embedded above.
+- Market intelligence: Tavily Search
+  - CNBC (AAPL turned positive YTD after iPhone 17)
+  - MarketMinute via markets.financialcontent (analyst initiations/upgrades; PTs; risks; earnings timing)
+  - AppleInsider (shares near 52-week high ~$260)
+  - Nasdaq earnings page (timing reference)
+- Financial metrics: Tavily Search
+  - Yahoo Finance Key Statistics; Morningstar; Forbes; FullRatio (market cap, P/E, revenue, margins, ROE/ROA, cash/debt, current ratio)
+
+Timestamp: Data and prices reflect sources accessed through Sep 22, 2025.`
+};
+
 function App() {
   const [analysisData, setAnalysisData] =
     useState<StockAnalysisResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [useMockData, setUseMockData] = useState(false); // Toggle para mock data
 
   const handleAnalyze = async (ticker: string) => {
     setIsLoading(true);
@@ -15,6 +81,14 @@ function App() {
     setAnalysisData(null);
 
     try {
+      // Si está activado el modo mock, usar datos de prueba
+      if (useMockData) {
+        // Simular delay de API
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setAnalysisData({ ...MOCK_ANALYSIS_DATA, ticker: ticker.toUpperCase() });
+        return;
+      }
+
       // 👇 Pasamos el ticker como query param
       const response = await fetch(
         `https://n8n-latest-45a4.onrender.com/webhook/a0ea8e36-8d95-453d-a776-6dbc9ce49b03?query=${encodeURIComponent(
@@ -67,10 +141,30 @@ function App() {
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Navigation Header */}
       <nav className="bg-gray-800 border-b border-gray-700 px-6 py-4">
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-blue-400">
             Angu's Stock Analyzer
           </h1>
+          
+          {/* Mock Data Toggle */}
+          <div className="flex items-center space-x-3">
+            <span className="text-sm text-gray-400">Modo Demo:</span>
+            <button
+              onClick={() => setUseMockData(!useMockData)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                useMockData ? 'bg-blue-600' : 'bg-gray-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  useMockData ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span className="text-sm text-gray-400">
+              {useMockData ? 'Mock' : 'API Real'}
+            </span>
+          </div>
         </div>
       </nav>
 
