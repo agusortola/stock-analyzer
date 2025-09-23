@@ -65,25 +65,25 @@ const transformMarkdownToJSON = (rawContent: string, ticker: string): StockAnaly
   const rsiMatch = cleanContent.match(/RSI:\s*([\d.]+)/i);
   if (rsiMatch) {
     const rsi = parseFloat(rsiMatch[1]);
-    const type = rsi > 70 ? 'bearish' : rsi < 30 ? 'bullish' : 'neutral';
+    const type: 'bearish' | 'bullish' | 'neutral' = rsi > 70 ? 'bearish' : rsi < 30 ? 'bullish' : 'neutral';
     metrics.push({ label: 'RSI', value: rsiMatch[1], type });
   }
 
   const macdMatch = cleanContent.match(/MACD:\s*([-\d.]+)/i);
   if (macdMatch) {
     const macd = parseFloat(macdMatch[1]);
-    const type = macd > 0 ? 'bullish' : 'bearish';
+    const type: 'bearish' | 'bullish' | 'neutral' = macd > 0 ? 'bullish' : 'bearish';
     metrics.push({ label: 'MACD', value: macdMatch[1], type });
   }
 
   const supportMatch = cleanContent.match(/Support:\s*\$?([\d.,]+)/i);
   if (supportMatch) {
-    metrics.push({ label: 'Support', value: `$${supportMatch[1]}`, type: 'neutral' });
+    metrics.push({ label: 'Support', value: `$${supportMatch[1]}`, type: 'neutral' as const });
   }
 
   const resistanceMatch = cleanContent.match(/Resistance:\s*\$?([\d.,]+)/i);
   if (resistanceMatch) {
-    metrics.push({ label: 'Resistance', value: `$${resistanceMatch[1]}`, type: 'neutral' });
+    metrics.push({ label: 'Resistance', value: `$${resistanceMatch[1]}`, type: 'neutral' as const });
   }
 
   // Determinar sentiment
@@ -94,13 +94,13 @@ const transformMarkdownToJSON = (rawContent: string, ticker: string): StockAnaly
   const bullishCount = bullishWords.reduce((count, word) => count + (lowerContent.match(new RegExp(word, 'g')) || []).length, 0);
   const bearishCount = bearishWords.reduce((count, word) => count + (lowerContent.match(new RegExp(word, 'g')) || []).length, 0);
   
-  let sentiment;
+  let sentiment: { label: 'Bullish' | 'Bearish' | 'Neutral'; color: string };
   if (bullishCount > bearishCount) {
-    sentiment = { label: 'Bullish', color: 'bg-green-100 text-green-800 border-green-300' };
+    sentiment = { label: 'Bullish' as const, color: 'bg-green-100 text-green-800 border-green-300' };
   } else if (bearishCount > bullishCount) {
-    sentiment = { label: 'Bearish', color: 'bg-red-100 text-red-800 border-red-300' };
+    sentiment = { label: 'Bearish' as const, color: 'bg-red-100 text-red-800 border-red-300' };
   } else {
-    sentiment = { label: 'Neutral', color: 'bg-gray-100 text-gray-800 border-gray-300' };
+    sentiment = { label: 'Neutral' as const, color: 'bg-gray-100 text-gray-800 border-gray-300' };
   }
 
   return {
