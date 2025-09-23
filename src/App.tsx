@@ -3,6 +3,116 @@ import SearchBar from "./components/SearchBar";
 import AnalysisResult from "./components/AnalysisResult";
 import type { StockAnalysisResponse } from "./types/api";
 
+// Función para transformar markdown a JSON estructurado
+const transformMarkdownToJSON = (rawContent: string, ticker: string): StockAnalysisResponse => {
+  // Extraer ticker del contenido si está presente
+  const tickerMatch = rawContent.match(/Ticker for searches?:\s*([A-Z]+)/i);
+  const extractedTicker = tickerMatch ? tickerMatch[1] : ticker.toUpperCase();
+
+  // Extraer chartUrl
+  const chartUrlMatch = rawContent.match(/(https?:\/\/[^\s]+\.png)/);
+  const chartUrl = chartUrlMatch ? chartUrlMatch[1] : undefined;
+
+  // Limpiar contenido - eliminar referencias a URLs de gráficos
+  let cleanContent = rawContent
+    .replace(/Chart URL:\s*`?https?:\/\/[^\s`]+`?\s*/g, '')
+    .replace(/!\s*`https?:\/\/[^\s`]+`\s*/g, '')
+    .replace(/`https?:\/\/[^\s`]+`\s*/g, '')
+    .replace(/^https?:\/\/[^\s]+\s*/gm, '')
+    .replace(/^-+\s*$/gm, '')
+    .replace(/^\s*\n+/gm, '')
+    .trim();
+
+  // Extraer secciones basadas en patrones - Technical Analysis primero
+  const sections = [];
+  
+  // Patrones para diferentes tipos de secciones - reordenados con Technical Analysis primero
+  const sectionPatterns = [
+    { key: 'technical', title: 'Technical Analysis Deep Dive', pattern: /(?:##?\s*(?:\d+\.?\s*)?Technical Analysis|Technical Analysis Deep Dive)([\s\S]*?)(?=##?\s*\d+\.|$)/i },
+    { key: 'indicators', title: 'Indicator Confluence', pattern: /(?:##?\s*(?:\d+\.?\s*)?Indicator Confluence|\d+\)\s*Indicator Confluence)([\s\S]*?)(?=##?\s*\d+\.|\d+\)|$)/i },
+    { key: 'executive', title: 'Executive Summary', pattern: /(?:##?\s*(?:1\.?\s*)?Executive Summary|Executive Summary)([\s\S]*?)(?=##?\s*\d+\.|$)/i },
+    { key: 'snapshot', title: 'Financial Snapshot', pattern: /(?:##?\s*(?:\d+\.?\s*)?Financial Snapshot|Financial Snapshot)([\s\S]*?)(?=##?\s*\d+\.|$)/i },
+    { key: 'levels', title: 'Critical Levels', pattern: /(?:##?\s*(?:\d+\.?\s*)?Critical Levels|Critical Levels)([\s\S]*?)(?=##?\s*\d+\.|$)/i },
+    { key: 'outlook', title: 'Technical Outlook', pattern: /(?:##?\s*(?:\d+\.?\s*)?Technical Outlook|Technical Outlook)([\s\S]*?)(?=##?\s*\d+\.|$)/i },
+    { key: 'market', title: 'Market Context & Sentiment', pattern: /(?:##?\s*(?:\d+\.?\s*)?Market Context|Market Context & Sentiment|\d+\)\s*Market Context)([\s\S]*?)(?=##?\s*\d+\.|\d+\)|$)/i },
+    { key: 'thesis', title: 'Integrated Investment Thesis', pattern: /(?:##?\s*(?:\d+\.?\s*)?Integrated Investment Thesis|\d+\)\s*Integrated Investment Thesis)([\s\S]*?)(?=##?\s*\d+\.|\d+\)|$)/i },
+    { key: 'summary', title: 'Summary', pattern: /(?:##?\s*(?:\d+\.?\s*)?Summary|Summary)([\s\S]*?)(?=##?\s*\d+\.|$)/i }
+  ];
+
+  sectionPatterns.forEach(({ key, title, pattern }) => {
+    const match = cleanContent.match(pattern);
+    if (match && match[1] && match[1].trim().length > 20) {
+      sections.push({
+        key,
+        title,
+        content: match[1].trim()
+      });
+    }
+  });
+
+  // Si no se encontraron secciones específicas, crear una sección general
+  if (sections.length === 0) {
+    sections.push({
+      key: 'analysis',
+      title: 'Analysis',
+      content: cleanContent
+    });
+  }
+
+  // Extraer métricas
+  const metrics = [];
+  
+  const rsiMatch = cleanContent.match(/RSI:\s*([\d.]+)/i);
+  if (rsiMatch) {
+    const rsi = parseFloat(rsiMatch[1]);
+    const type = rsi > 70 ? 'bearish' : rsi < 30 ? 'bullish' : 'neutral';
+    metrics.push({ label: 'RSI', value: rsiMatch[1], type });
+  }
+
+  const macdMatch = cleanContent.match(/MACD:\s*([-\d.]+)/i);
+  if (macdMatch) {
+    const macd = parseFloat(macdMatch[1]);
+    const type = macd > 0 ? 'bullish' : 'bearish';
+    metrics.push({ label: 'MACD', value: macdMatch[1], type });
+  }
+
+  const supportMatch = cleanContent.match(/Support:\s*\$?([\d.,]+)/i);
+  if (supportMatch) {
+    metrics.push({ label: 'Support', value: `$${supportMatch[1]}`, type: 'neutral' });
+  }
+
+  const resistanceMatch = cleanContent.match(/Resistance:\s*\$?([\d.,]+)/i);
+  if (resistanceMatch) {
+    metrics.push({ label: 'Resistance', value: `$${resistanceMatch[1]}`, type: 'neutral' });
+  }
+
+  // Determinar sentiment
+  const bullishWords = ['bullish', 'positive', 'upside', 'buy', 'outperform', 'strong', 'favorable'];
+  const bearishWords = ['bearish', 'negative', 'downside', 'sell', 'underperform', 'weak', 'unfavorable'];
+  
+  const lowerContent = cleanContent.toLowerCase();
+  const bullishCount = bullishWords.reduce((count, word) => count + (lowerContent.match(new RegExp(word, 'g')) || []).length, 0);
+  const bearishCount = bearishWords.reduce((count, word) => count + (lowerContent.match(new RegExp(word, 'g')) || []).length, 0);
+  
+  let sentiment;
+  if (bullishCount > bearishCount) {
+    sentiment = { label: 'Bullish', color: 'bg-green-100 text-green-800 border-green-300' };
+  } else if (bearishCount > bullishCount) {
+    sentiment = { label: 'Bearish', color: 'bg-red-100 text-red-800 border-red-300' };
+  } else {
+    sentiment = { label: 'Neutral', color: 'bg-gray-100 text-gray-800 border-gray-300' };
+  }
+
+  return {
+    ticker: extractedTicker,
+    content: cleanContent,
+    chartUrl,
+    sections,
+    metrics,
+    sentiment
+  };
+};
+
 // Mock data para testing
 const MOCK_ANALYSIS_DATA: StockAnalysisResponse = {
   ticker: "AAPL",
@@ -65,7 +175,7 @@ const MOCK_ANALYSIS_DATA: StockAnalysisResponse = {
 - Financial metrics: Tavily Search
   - Yahoo Finance Key Statistics; Morningstar; Forbes; FullRatio (market cap, P/E, revenue, margins, ROE/ROA, cash/debt, current ratio)
 
-Timestamp: Data and prices reflect sources accessed through Sep 22, 2025.`
+Timestamp: Data and prices reflect sources accessed through Sep 22, 2025.`,
 };
 
 function App() {
@@ -84,8 +194,11 @@ function App() {
       // Si está activado el modo mock, usar datos de prueba
       if (useMockData) {
         // Simular delay de API
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setAnalysisData({ ...MOCK_ANALYSIS_DATA, ticker: ticker.toUpperCase() });
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setAnalysisData({
+          ...MOCK_ANALYSIS_DATA,
+          ticker: ticker.toUpperCase(),
+        });
         return;
       }
 
@@ -119,9 +232,63 @@ function App() {
         throw new Error(errorDetails);
       }
 
-      const data: StockAnalysisResponse = await response.json();
+      const data = await response.json();
       console.log("Received data:", data);
-      setAnalysisData(data);
+      console.log("Data type:", typeof data);
+      console.log(
+        "Data keys:",
+        typeof data === "object" ? Object.keys(data) : "N/A"
+      );
+      console.log("Data structure:", JSON.stringify(data, null, 2));
+
+      // Verificar si tiene las propiedades esperadas
+      const hasValidStructure =
+        typeof data === "object" &&
+        data !== null &&
+        (data.content || data.ticker || data.executiveSummary || data.output);
+
+      if (!hasValidStructure) {
+        console.warn(
+          "La respuesta de la API no tiene la estructura esperada:",
+          data
+        );
+
+        // Manejar el nuevo formato de array con objeto 'output'
+         let rawContent: string = "";
+         
+         if (Array.isArray(data) && data.length > 0 && data[0].output) {
+           rawContent = data[0].output;
+         } else if (typeof data === "string") {
+           rawContent = data;
+         } else if (typeof data === "object" && data !== null && "myField" in data) {
+           const dataObj = data as Record<string, unknown>;
+           rawContent = String(dataObj.myField);
+         } else {
+           throw new Error(
+             `La API devolvió datos en formato inesperado. Estructura recibida: ${JSON.stringify(data)}`
+           );
+         }
+
+         // Transformar el contenido markdown a la estructura JSON requerida
+         const convertedData = transformMarkdownToJSON(rawContent, ticker);
+
+        setAnalysisData(convertedData);
+      } else {
+        // La estructura es válida, usar como está
+        const dataObj = data as Record<string, unknown>;
+        const validData: StockAnalysisResponse = {
+          ticker:
+            typeof dataObj.ticker === "string"
+              ? dataObj.ticker
+              : ticker.toUpperCase(),
+          content:
+            (typeof dataObj.content === "string" ? dataObj.content : "") ||
+            (typeof dataObj.output === "string" ? dataObj.output : "") ||
+            "", // Asegurar que sea string
+          ...dataObj,
+        };
+        setAnalysisData(validData);
+      }
     } catch (err) {
       const errorMessage =
         err instanceof Error
@@ -145,24 +312,24 @@ function App() {
           <h1 className="text-xl font-bold text-blue-400">
             Angu's Stock Analyzer
           </h1>
-          
+
           {/* Mock Data Toggle */}
           <div className="flex items-center space-x-3">
             <span className="text-sm text-gray-400">Modo Demo:</span>
             <button
               onClick={() => setUseMockData(!useMockData)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                useMockData ? 'bg-blue-600' : 'bg-gray-600'
+                useMockData ? "bg-blue-600" : "bg-gray-600"
               }`}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  useMockData ? 'translate-x-6' : 'translate-x-1'
+                  useMockData ? "translate-x-6" : "translate-x-1"
                 }`}
               />
             </button>
             <span className="text-sm text-gray-400">
-              {useMockData ? 'Mock' : 'API Real'}
+              {useMockData ? "Mock" : "API Real"}
             </span>
           </div>
         </div>
