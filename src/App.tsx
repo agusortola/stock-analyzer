@@ -4,7 +4,10 @@ import AnalysisResult from "./components/AnalysisResult";
 import type { StockAnalysisResponse } from "./types/api";
 
 // Función para transformar markdown a JSON estructurado
-const transformMarkdownToJSON = (rawContent: string, ticker: string): StockAnalysisResponse => {
+const transformMarkdownToJSON = (
+  rawContent: string,
+  ticker: string
+): StockAnalysisResponse => {
   // Extraer ticker del contenido si está presente
   const tickerMatch = rawContent.match(/Ticker for searches?:\s*([A-Z]+)/i);
   const extractedTicker = tickerMatch ? tickerMatch[1] : ticker.toUpperCase();
@@ -15,28 +18,73 @@ const transformMarkdownToJSON = (rawContent: string, ticker: string): StockAnaly
 
   // Limpiar contenido - eliminar referencias a URLs de gráficos
   let cleanContent = rawContent
-    .replace(/Chart URL:\s*`?https?:\/\/[^\s`]+`?\s*/g, '')
-    .replace(/!\s*`https?:\/\/[^\s`]+`\s*/g, '')
-    .replace(/`https?:\/\/[^\s`]+`\s*/g, '')
-    .replace(/^https?:\/\/[^\s]+\s*/gm, '')
-    .replace(/^-+\s*$/gm, '')
-    .replace(/^\s*\n+/gm, '')
+    .replace(/Chart URL:\s*`?https?:\/\/[^\s`]+`?\s*/g, "")
+    .replace(/!\s*`https?:\/\/[^\s`]+`\s*/g, "")
+    .replace(/`https?:\/\/[^\s`]+`\s*/g, "")
+    .replace(/^https?:\/\/[^\s]+\s*/gm, "")
+    .replace(/^-+\s*$/gm, "")
+    .replace(/^\s*\n+/gm, "")
     .trim();
 
   // Extraer secciones basadas en patrones - Technical Analysis primero
   const sections = [];
-  
+
   // Patrones para diferentes tipos de secciones - reordenados con Technical Analysis primero
   const sectionPatterns = [
-    { key: 'technical', title: 'Technical Analysis Deep Dive', pattern: /(?:##?\s*(?:\d+\.?\s*)?Technical Analysis|Technical Analysis Deep Dive)([\s\S]*?)(?=##?\s*\d+\.|$)/i },
-    { key: 'indicators', title: 'Indicator Confluence', pattern: /(?:##?\s*(?:\d+\.?\s*)?Indicator Confluence|\d+\)\s*Indicator Confluence)([\s\S]*?)(?=##?\s*\d+\.|\d+\)|$)/i },
-    { key: 'executive', title: 'Executive Summary', pattern: /(?:##?\s*(?:1\.?\s*)?Executive Summary|Executive Summary)([\s\S]*?)(?=##?\s*\d+\.|$)/i },
-    { key: 'snapshot', title: 'Financial Snapshot', pattern: /(?:##?\s*(?:\d+\.?\s*)?Financial Snapshot|Financial Snapshot)([\s\S]*?)(?=##?\s*\d+\.|$)/i },
-    { key: 'levels', title: 'Critical Levels', pattern: /(?:##?\s*(?:\d+\.?\s*)?Critical Levels|Critical Levels)([\s\S]*?)(?=##?\s*\d+\.|$)/i },
-    { key: 'outlook', title: 'Technical Outlook', pattern: /(?:##?\s*(?:\d+\.?\s*)?Technical Outlook|Technical Outlook)([\s\S]*?)(?=##?\s*\d+\.|$)/i },
-    { key: 'market', title: 'Market Context & Sentiment', pattern: /(?:##?\s*(?:\d+\.?\s*)?Market Context|Market Context & Sentiment|\d+\)\s*Market Context)([\s\S]*?)(?=##?\s*\d+\.|\d+\)|$)/i },
-    { key: 'thesis', title: 'Integrated Investment Thesis', pattern: /(?:##?\s*(?:\d+\.?\s*)?Integrated Investment Thesis|\d+\)\s*Integrated Investment Thesis)([\s\S]*?)(?=##?\s*\d+\.|\d+\)|$)/i },
-    { key: 'summary', title: 'Summary', pattern: /(?:##?\s*(?:\d+\.?\s*)?Summary|Summary)([\s\S]*?)(?=##?\s*\d+\.|$)/i }
+    {
+      key: "technical",
+      title: "Technical Analysis Deep Dive",
+      pattern:
+        /(?:##?\s*(?:\d+\.?\s*)?Technical Analysis|Technical Analysis Deep Dive)([\s\S]*?)(?=##?\s*\d+\.|$)/i,
+    },
+    {
+      key: "indicators",
+      title: "Indicator Confluence",
+      pattern:
+        /(?:##?\s*(?:\d+\.?\s*)?Indicator Confluence|\d+\)\s*Indicator Confluence)([\s\S]*?)(?=##?\s*\d+\.|\d+\)|$)/i,
+    },
+    {
+      key: "executive",
+      title: "Executive Summary",
+      pattern:
+        /(?:##?\s*(?:1\.?\s*)?Executive Summary|Executive Summary)([\s\S]*?)(?=##?\s*\d+\.|$)/i,
+    },
+    {
+      key: "snapshot",
+      title: "Financial Snapshot",
+      pattern:
+        /(?:##?\s*(?:\d+\.?\s*)?Financial Snapshot|Financial Snapshot)([\s\S]*?)(?=##?\s*\d+\.|$)/i,
+    },
+    {
+      key: "levels",
+      title: "Critical Levels",
+      pattern:
+        /(?:##?\s*(?:\d+\.?\s*)?Critical Levels|Critical Levels)([\s\S]*?)(?=##?\s*\d+\.|$)/i,
+    },
+    {
+      key: "outlook",
+      title: "Technical Outlook",
+      pattern:
+        /(?:##?\s*(?:\d+\.?\s*)?Technical Outlook|Technical Outlook)([\s\S]*?)(?=##?\s*\d+\.|$)/i,
+    },
+    {
+      key: "market",
+      title: "Market Context & Sentiment",
+      pattern:
+        /(?:##?\s*(?:\d+\.?\s*)?Market Context|Market Context & Sentiment|\d+\)\s*Market Context)([\s\S]*?)(?=##?\s*\d+\.|\d+\)|$)/i,
+    },
+    {
+      key: "thesis",
+      title: "Integrated Investment Thesis",
+      pattern:
+        /(?:##?\s*(?:\d+\.?\s*)?Integrated Investment Thesis|\d+\)\s*Integrated Investment Thesis)([\s\S]*?)(?=##?\s*\d+\.|\d+\)|$)/i,
+    },
+    {
+      key: "summary",
+      title: "Summary",
+      pattern:
+        /(?:##?\s*(?:\d+\.?\s*)?Summary|Summary)([\s\S]*?)(?=##?\s*\d+\.|$)/i,
+    },
   ];
 
   sectionPatterns.forEach(({ key, title, pattern }) => {
@@ -45,7 +93,7 @@ const transformMarkdownToJSON = (rawContent: string, ticker: string): StockAnaly
       sections.push({
         key,
         title,
-        content: match[1].trim()
+        content: match[1].trim(),
       });
     }
   });
@@ -53,54 +101,97 @@ const transformMarkdownToJSON = (rawContent: string, ticker: string): StockAnaly
   // Si no se encontraron secciones específicas, crear una sección general
   if (sections.length === 0) {
     sections.push({
-      key: 'analysis',
-      title: 'Analysis',
-      content: cleanContent
+      key: "analysis",
+      title: "Analysis",
+      content: cleanContent,
     });
   }
 
   // Extraer métricas
   const metrics = [];
-  
+
   const rsiMatch = cleanContent.match(/RSI:\s*([\d.]+)/i);
   if (rsiMatch) {
     const rsi = parseFloat(rsiMatch[1]);
-    const type: 'bearish' | 'bullish' | 'neutral' = rsi > 70 ? 'bearish' : rsi < 30 ? 'bullish' : 'neutral';
-    metrics.push({ label: 'RSI', value: rsiMatch[1], type });
+    const type: "bearish" | "bullish" | "neutral" =
+      rsi > 70 ? "bearish" : rsi < 30 ? "bullish" : "neutral";
+    metrics.push({ label: "RSI", value: rsiMatch[1], type });
   }
 
   const macdMatch = cleanContent.match(/MACD:\s*([-\d.]+)/i);
   if (macdMatch) {
     const macd = parseFloat(macdMatch[1]);
-    const type: 'bearish' | 'bullish' | 'neutral' = macd > 0 ? 'bullish' : 'bearish';
-    metrics.push({ label: 'MACD', value: macdMatch[1], type });
+    const type: "bearish" | "bullish" | "neutral" =
+      macd > 0 ? "bullish" : "bearish";
+    metrics.push({ label: "MACD", value: macdMatch[1], type });
   }
 
   const supportMatch = cleanContent.match(/Support:\s*\$?([\d.,]+)/i);
   if (supportMatch) {
-    metrics.push({ label: 'Support', value: `$${supportMatch[1]}`, type: 'neutral' as const });
+    metrics.push({
+      label: "Support",
+      value: `$${supportMatch[1]}`,
+      type: "neutral" as const,
+    });
   }
 
   const resistanceMatch = cleanContent.match(/Resistance:\s*\$?([\d.,]+)/i);
   if (resistanceMatch) {
-    metrics.push({ label: 'Resistance', value: `$${resistanceMatch[1]}`, type: 'neutral' as const });
+    metrics.push({
+      label: "Resistance",
+      value: `$${resistanceMatch[1]}`,
+      type: "neutral" as const,
+    });
   }
 
   // Determinar sentiment
-  const bullishWords = ['bullish', 'positive', 'upside', 'buy', 'outperform', 'strong', 'favorable'];
-  const bearishWords = ['bearish', 'negative', 'downside', 'sell', 'underperform', 'weak', 'unfavorable'];
-  
+  const bullishWords = [
+    "bullish",
+    "positive",
+    "upside",
+    "buy",
+    "outperform",
+    "strong",
+    "favorable",
+  ];
+  const bearishWords = [
+    "bearish",
+    "negative",
+    "downside",
+    "sell",
+    "underperform",
+    "weak",
+    "unfavorable",
+  ];
+
   const lowerContent = cleanContent.toLowerCase();
-  const bullishCount = bullishWords.reduce((count, word) => count + (lowerContent.match(new RegExp(word, 'g')) || []).length, 0);
-  const bearishCount = bearishWords.reduce((count, word) => count + (lowerContent.match(new RegExp(word, 'g')) || []).length, 0);
-  
-  let sentiment: { label: 'Bullish' | 'Bearish' | 'Neutral'; color: string };
+  const bullishCount = bullishWords.reduce(
+    (count, word) =>
+      count + (lowerContent.match(new RegExp(word, "g")) || []).length,
+    0
+  );
+  const bearishCount = bearishWords.reduce(
+    (count, word) =>
+      count + (lowerContent.match(new RegExp(word, "g")) || []).length,
+    0
+  );
+
+  let sentiment: { label: "Bullish" | "Bearish" | "Neutral"; color: string };
   if (bullishCount > bearishCount) {
-    sentiment = { label: 'Bullish' as const, color: 'bg-green-100 text-green-800 border-green-300' };
+    sentiment = {
+      label: "Bullish" as const,
+      color: "bg-green-100 text-green-800 border-green-300",
+    };
   } else if (bearishCount > bullishCount) {
-    sentiment = { label: 'Bearish' as const, color: 'bg-red-100 text-red-800 border-red-300' };
+    sentiment = {
+      label: "Bearish" as const,
+      color: "bg-red-100 text-red-800 border-red-300",
+    };
   } else {
-    sentiment = { label: 'Neutral' as const, color: 'bg-gray-100 text-gray-800 border-gray-300' };
+    sentiment = {
+      label: "Neutral" as const,
+      color: "bg-gray-100 text-gray-800 border-gray-300",
+    };
   }
 
   return {
@@ -109,7 +200,7 @@ const transformMarkdownToJSON = (rawContent: string, ticker: string): StockAnaly
     chartUrl,
     sections,
     metrics,
-    sentiment
+    sentiment,
   };
 };
 
@@ -254,23 +345,29 @@ function App() {
         );
 
         // Manejar el nuevo formato de array con objeto 'output'
-         let rawContent: string = "";
-         
-         if (Array.isArray(data) && data.length > 0 && data[0].output) {
-           rawContent = data[0].output;
-         } else if (typeof data === "string") {
-           rawContent = data;
-         } else if (typeof data === "object" && data !== null && "myField" in data) {
-           const dataObj = data as Record<string, unknown>;
-           rawContent = String(dataObj.myField);
-         } else {
-           throw new Error(
-             `La API devolvió datos en formato inesperado. Estructura recibida: ${JSON.stringify(data)}`
-           );
-         }
+        let rawContent: string = "";
 
-         // Transformar el contenido markdown a la estructura JSON requerida
-         const convertedData = transformMarkdownToJSON(rawContent, ticker);
+        if (Array.isArray(data) && data.length > 0 && data[0].output) {
+          rawContent = data[0].output;
+        } else if (typeof data === "string") {
+          rawContent = data;
+        } else if (
+          typeof data === "object" &&
+          data !== null &&
+          "myField" in data
+        ) {
+          const dataObj = data as Record<string, unknown>;
+          rawContent = String(dataObj.myField);
+        } else {
+          throw new Error(
+            `La API devolvió datos en formato inesperado. Estructura recibida: ${JSON.stringify(
+              data
+            )}`
+          );
+        }
+
+        // Transformar el contenido markdown a la estructura JSON requerida
+        const convertedData = transformMarkdownToJSON(rawContent, ticker);
 
         setAnalysisData(convertedData);
       } else {
@@ -309,9 +406,7 @@ function App() {
       {/* Navigation Header */}
       <nav className="bg-gray-800 border-b border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-blue-400">
-            Angu's Stock Analyzer
-          </h1>
+          <h1 className="text-xl font-bold text-blue-400">Stock Analyzer</h1>
 
           {/* Mock Data Toggle */}
           <div className="flex items-center space-x-3">
